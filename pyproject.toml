@@ -1,0 +1,15 @@
+[project]
+name = "ndis-assist"
+version = "0.1.0"
+description = "Document-grounded assistant for NDIS support workers"
+requires-python = ">=3.11,<3.13"
+dependencies = [
+    "anthropic==1.5.0",
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.30",
+    "pypdf>=5.1",
+    "python-dotenv>=1.0",
+]
+
+[tool.uv]
+package = false

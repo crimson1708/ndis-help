@@ -1,0 +1,354 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Support Assistant</title>
+<style>
+  :root {
+    --bg: #f6f7f9; --panel: #fff; --ink: #14181f; --muted: #667085;
+    --line: #e3e6ea; --accent: #1f5fd6; --accent-soft: #eaf0fd;
+    --warn-bg: #fdecec; --warn-ink: #8c1d1d; --warn-line: #f3bcbc;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0f1115; --panel: #171a21; --ink: #e8ebf0; --muted: #98a2b3;
+      --line: #262b34; --accent: #6d9eff; --accent-soft: #1a2438;
+      --warn-bg: #2d1618; --warn-ink: #ffb4b4; --warn-line: #5a2a2c;
+    }
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    margin: 0; background: var(--bg); color: var(--ink);
+    font: 16px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    display: flex; flex-direction: column;
+  }
+  header {
+    padding: 12px 16px calc(12px + env(safe-area-inset-top)); background: var(--panel);
+    border-bottom: 1px solid var(--line); position: sticky; top: 0; z-index: 5;
+  }
+  header h1 { margin: 0; font-size: 16px; font-weight: 650; letter-spacing: -.01em; }
+  header p { margin: 2px 0 0; font-size: 12.5px; color: var(--muted); }
+  main { flex: 1; overflow-y: auto; padding: 16px; }
+  .wrap { max-width: 720px; margin: 0 auto; }
+  .msg { margin-bottom: 20px; }
+  .msg.user .bubble {
+    background: var(--accent); color: #fff; margin-left: auto;
+    border-radius: 16px 16px 4px 16px; padding: 10px 14px; max-width: 85%;
+    width: fit-content;
+  }
+  .msg.bot .bubble {
+    background: var(--panel); border: 1px solid var(--line);
+    border-radius: 16px 16px 16px 4px; padding: 14px 16px;
+  }
+  .bubble p { margin: 0 0 .7em; } .bubble p:last-child { margin-bottom: 0; }
+  .bubble ol, .bubble ul { margin: .3em 0 .8em; padding-left: 1.3em; }
+  .bubble li { margin-bottom: .35em; }
+  .urgent {
+    background: var(--warn-bg); border-color: var(--warn-line) !important;
+    color: var(--warn-ink);
+  }
+  sup.cite {
+    display: inline-block; min-width: 16px; height: 16px; line-height: 16px;
+    margin-left: 2px; padding: 0 4px; border-radius: 8px; font-size: 10.5px;
+    background: var(--accent-soft); color: var(--accent); cursor: pointer;
+    text-align: center; font-weight: 600; vertical-align: super;
+  }
+  sup.cite:hover { background: var(--accent); color: #fff; }
+  .sources { margin-top: 12px; border-top: 1px solid var(--line); padding-top: 10px; }
+  .sources summary {
+    cursor: pointer; font-size: 13px; color: var(--muted); font-weight: 550;
+    list-style: none;
+  }
+  .sources summary::-webkit-details-marker { display: none; }
+  .sources summary::before { content: "\25B8  "; }
+  .sources[open] summary::before { content: "\25BE  "; }
+  .src {
+    margin-top: 10px; padding: 9px 11px; background: var(--bg);
+    border: 1px solid var(--line); border-left: 3px solid var(--accent);
+    border-radius: 6px; font-size: 13.5px;
+  }
+  .src a { color: var(--accent); font-weight: 600; text-decoration: none; }
+  .src a:hover { text-decoration: underline; }
+  .src blockquote {
+    margin: 5px 0 0; color: var(--muted); font-style: italic;
+    border: 0; padding: 0;
+  }
+  .attrib {
+    margin: 4px 0 0; font-size: 12px; line-height: 1.45;
+    color: var(--muted); font-style: italic;
+  }
+  .ungrounded {
+    font-size: 12.5px; color: var(--muted); margin-top: 10px;
+    padding-top: 8px; border-top: 1px dashed var(--line);
+  }
+  footer {
+    background: var(--panel); border-top: 1px solid var(--line);
+    padding: 10px 16px calc(10px + env(safe-area-inset-bottom));
+  }
+  .composer { max-width: 720px; margin: 0 auto; display: flex; gap: 8px; }
+  textarea {
+    flex: 1; resize: none; font: inherit; padding: 10px 12px; color: var(--ink);
+    background: var(--bg); border: 1px solid var(--line); border-radius: 10px;
+    max-height: 140px;
+  }
+  textarea:focus { outline: 2px solid var(--accent); border-color: transparent; }
+  button {
+    font: inherit; font-weight: 600; padding: 0 18px; border: 0; cursor: pointer;
+    background: var(--accent); color: #fff; border-radius: 10px;
+  }
+  button:disabled { opacity: .5; cursor: default; }
+  .disclaimer {
+    max-width: 720px; margin: 8px auto 0; font-size: 11.5px; color: var(--muted);
+    text-align: center;
+  }
+  .dots span {
+    display: inline-block; width: 6px; height: 6px; margin-right: 3px;
+    background: var(--muted); border-radius: 50%; animation: blink 1.2s infinite;
+  }
+  .dots span:nth-child(2) { animation-delay: .2s; }
+  .dots span:nth-child(3) { animation-delay: .4s; }
+  @keyframes blink { 0%, 60%, 100% { opacity: .25; } 30% { opacity: 1; } }
+</style>
+</head>
+<body>
+<header>
+  <h1>Support Assistant</h1>
+  <p id="sub">Answers from your organisation's policy documents only</p>
+</header>
+
+<main><div class="wrap" id="feed"></div></main>
+
+<footer>
+  <div class="composer">
+    <textarea id="q" rows="1" placeholder="Ask about a policy or procedure..."></textarea>
+    <button id="send">Ask</button>
+  </div>
+  <p class="disclaimer">
+    Reference tool only &mdash; not clinical advice. In an emergency call <strong>000</strong>.
+  </p>
+</footer>
+
+<script>
+const feed = document.getElementById('feed');
+const box = document.getElementById('q');
+const send = document.getElementById('send');
+let seq = 0;
+
+fetch('/api/health').then(r => r.json()).then(d => {
+  const sub = document.getElementById('sub');
+  if (!d.documents) {
+    sub.textContent = 'No documents indexed yet — add PDFs to documents/ and reindex';
+    return;
+  }
+  const from = 'Answering from ' + d.documents +
+    ' document' + (d.documents > 1 ? 's' : '');
+  // Name the backend in the header: the two differ in how much their
+  // citations are worth, and the person reading should know which they have.
+  sub.textContent = d.backend === 'ollama'
+    ? from + ' — ' + d.model + ' on this machine, page-level sources'
+    : from + ' — citations included';
+  if (!d.ready && d.error) {
+    sub.textContent = from + ' — not ready: ' + d.error;
+  }
+}).catch(() => {});
+
+box.addEventListener('input', () => {
+  box.style.height = 'auto';
+  box.style.height = Math.min(box.scrollHeight, 140) + 'px';
+});
+box.addEventListener('keydown', e => {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); ask(); }
+});
+send.addEventListener('click', ask);
+
+const esc = s => String(s).replace(/[&<>"]/g, c => (
+  { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]
+));
+
+function blocks(text) {
+  // Light formatting: paragraph breaks, and numbered/bulleted steps as lists.
+  // Returns block descriptors rather than finished HTML, because one list is
+  // routinely split across several citation segments and has to be stitched
+  // back together before it can render as a single list.
+  const out = [];
+  for (const chunk of text.split(/\n{2,}/)) {
+    // Classify line by line rather than all-or-nothing for the chunk: a list
+    // introduced by a lead-in ("An advocate is allowed to:") is the normal
+    // shape, and demanding that every line be numbered dropped the lead-in and
+    // the first step into a paragraph, restarting the list one item late.
+    for (const line of chunk.split('\n')) {
+      if (!line.trim()) continue;
+      const ol = line.match(/^\s*(\d+)[.)]\s+(.*)$/);
+      const ul = line.match(/^\s*[-*•]\s+(.*)$/);
+      const open = out[out.length - 1];
+      if (ol) {
+        if (open && open.type === 'ol' && open.start + open.items.length === +ol[1]) {
+          open.items.push(esc(ol[2]));
+        } else {
+          out.push({ type: 'ol', start: +ol[1], items: [esc(ol[2])] });
+        }
+      } else if (ul) {
+        if (open && open.type === 'ul') open.items.push(esc(ul[1]));
+        else out.push({ type: 'ul', start: 1, items: [esc(ul[1])] });
+      } else if (open && open.type === 'p') {
+        open.items[0] += '<br>' + esc(line.trim());
+      } else {
+        out.push({ type: 'p', start: 1, items: [esc(line.trim())] });
+      }
+    }
+  }
+  return out;
+}
+
+function blocksToHtml(list) {
+  return list.map(b => b.type === 'p'
+    ? '<p>' + b.items[0] + '</p>'
+    // Honour where the model started counting, so a list that genuinely opens
+    // at 3 is not silently renumbered from 1.
+    : '<' + b.type + (b.type === 'ol' && b.start !== 1 ? ' start="' + b.start + '"' : '') +
+      '>' + b.items.map(i => '<li>' + i + '</li>').join('') + '</' + b.type + '>'
+  ).join('');
+}
+
+function pageLabel(c) {
+  // end_page_number is exclusive: [3,4) is the single page 3.
+  if (c.page_start == null) return '';
+  const end = (c.page_end == null ? c.page_start + 1 : c.page_end) - 1;
+  return end > c.page_start ? 'pp. ' + c.page_start + '–' + end : 'p. ' + c.page_start;
+}
+
+function addUser(text) {
+  const el = document.createElement('div');
+  el.className = 'msg user';
+  el.innerHTML = '<div class="bubble">' + esc(text) + '</div>';
+  feed.appendChild(el);
+  scrollDown();
+}
+
+function render(data) {
+  const id = ++seq;
+  const urgent = /\bcall 000\b/i.test(data.text.slice(0, 220));
+  const cites = [];
+  const numbered = new Map();
+  const merged = [];
+
+  for (const seg of data.segments) {
+    const segBlocks = blocks(seg.text);
+    if (!segBlocks.length) continue;
+
+    let sups = '';
+    for (const c of seg.citations) {
+      // One source, one number. Citing the same page for six consecutive steps
+      // is normal and correct; listing that page six times is not. Quotes stay
+      // distinct even on one page, since the span is the thing being shown.
+      const key = [c.document_id, c.page_start, c.page_end, c.cited_text || ''].join('|');
+      let n = numbered.get(key);
+      if (n === undefined) {
+        n = cites.length + 1;
+        numbered.set(key, n);
+        cites.push(Object.assign({}, c, { n: n }));
+      }
+      sups += '<sup class="cite" data-n="' + n + '" title="' +
+        esc(c.document_title) + ' ' + esc(pageLabel(c)) + '">' + n + '</sup>';
+    }
+    // Markers belong with the text they support: the end of this segment.
+    const last = segBlocks[segBlocks.length - 1];
+    last.items[last.items.length - 1] += sups;
+
+    // A cited step arrives as its own segment, so a numbered list reaches us in
+    // pieces. Rendering each piece as its own list restarted every step at 1 -
+    // continue the list that is already open instead.
+    let i = 0;
+    const open = merged[merged.length - 1];
+    const head = segBlocks[0];
+    // Continue the open list only where the model's own numbering continues.
+    // A fresh list that restarts at 1 stays a fresh list.
+    if (open && open.type === head.type && (head.type === 'ul' ||
+        (head.type === 'ol' && open.start + open.items.length === head.start))) {
+      open.items.push(...head.items);
+      i = 1;
+    }
+    for (; i < segBlocks.length; i++) merged.push(segBlocks[i]);
+  }
+  let body = blocksToHtml(merged);
+  if (!body) body = blocksToHtml(blocks(data.text));
+
+  let srcHtml = '';
+  if (cites.length) {
+    srcHtml = '<details class="sources" open><summary>' + cites.length +
+      ' citation' + (cites.length > 1 ? 's' : '') + '</summary>' +
+      cites.map(c => {
+        const link = c.document_id
+          ? '<a href="/api/documents/' + c.document_id + '/file#page=' +
+            (c.page_start || 1) + '" target="_blank" rel="noopener">' +
+            esc(c.document_title) + ' · ' + esc(pageLabel(c)) + '</a>'
+          : '<strong>' + esc(c.document_title) + '</strong>';
+        // A local model cannot prove it quoted anything - all we know is which
+        // page we put in front of it. Say that, rather than dressing an
+        // unverified claim up as a quotation.
+        const evidence = c.kind === 'page'
+          ? '<p class="attrib">This page was in the prompt. The model was not ' +
+            'able to show which words it used — open the page to check.</p>'
+          : '<blockquote>“' + esc((c.cited_text || '').trim()) + '”</blockquote>';
+        return '<div class="src" id="c' + id + '-' + c.n + '"><strong>' + c.n +
+          '.</strong> ' + link + evidence + '</div>';
+      }).join('') + '</details>';
+  } else if (data.grounded === false && data.sources.length) {
+    srcHtml = '<p class="ungrounded">No passage in your documents supported an ' +
+      'answer here. Searched: ' +
+      data.sources.map(s => esc(s.title)).join(', ') + '.</p>';
+  }
+
+  const el = document.createElement('div');
+  el.className = 'msg bot';
+  el.innerHTML = '<div class="bubble' + (urgent ? ' urgent' : '') + '">' +
+    body + srcHtml + '</div>';
+  el.querySelectorAll('sup.cite').forEach(s => s.addEventListener('click', () => {
+    const t = document.getElementById('c' + id + '-' + s.dataset.n);
+    if (t) t.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }));
+  return el;
+}
+
+async function ask() {
+  const text = box.value.trim();
+  if (!text) return;
+  box.value = '';
+  box.style.height = 'auto';
+  send.disabled = true;
+  addUser(text);
+
+  const pending = document.createElement('div');
+  pending.className = 'msg bot';
+  pending.innerHTML = '<div class="bubble"><span class="dots">' +
+    '<span></span><span></span><span></span></span></div>';
+  feed.appendChild(pending);
+  scrollDown();
+
+  try {
+    const res = await fetch('/api/ask', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ question: text }),
+    });
+    if (!res.ok) throw new Error(await res.text());
+    pending.replaceWith(render(await res.json()));
+  } catch (err) {
+    pending.innerHTML = '<div class="bubble urgent"><p>Couldn\'t get an answer: ' +
+      esc(err.message || err) + '</p></div>';
+  } finally {
+    send.disabled = false;
+    box.focus();
+    scrollDown();
+  }
+}
+
+function scrollDown() {
+  const m = document.querySelector('main');
+  m.scrollTop = m.scrollHeight;
+}
+</script>
+</body>
+</html>
